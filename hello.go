@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"github.com/deckarep/golang-set"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -9,9 +10,34 @@ import (
 )
 
 func main() {
-	link, _ := url.Parse("https://github.com")
-	urls := GetExternalLinks(link)
-	fmt.Print(urls)
+	domain := "https://github.com/"
+	maxUrlsToCrawl := 10
+
+	link, _ := url.Parse(domain)
+	host := link.Host
+	toCrawl := mapset.NewSet(link)
+	alreadyCrawled := mapset.NewSet()
+	for i := 0; i < maxUrlsToCrawl; i++ {
+		linkToGet := toCrawl.Pop().(*url.URL)
+		links := GetExternalLinks(linkToGet)
+		alreadyCrawled.Add(*linkToGet)
+		sameDomainLinks := filterToSameDomain(host, links)
+		for _, link := range sameDomainLinks {
+			if !alreadyCrawled.Contains(*link) {
+				toCrawl.Add(link)
+			}
+		}
+	}
+}
+
+func filterToSameDomain(host string, links []*url.URL) []*url.URL {
+	sameDomainLinks := make([]*url.URL, 0)
+	for _, link := range links {
+		if link.Host == host {
+			sameDomainLinks = append(sameDomainLinks, link)
+		}
+	}
+	return sameDomainLinks
 }
 
 func GetExternalLinks(link *url.URL) []*url.URL {
@@ -23,7 +49,7 @@ func GetExternalLinks(link *url.URL) []*url.URL {
 	} else {
 		buffer := make([]byte, 1024*1024)
 		count, err := resp.Body.Read(buffer)
-		if err != nil {
+		if err != nil && err != io.EOF {
 			log.Panicf("Reading response body for link %s failed with %s", link, err)
 		}
 		log.Printf("Number of bytes read %d", count)
