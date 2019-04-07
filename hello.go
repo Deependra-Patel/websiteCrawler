@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/deckarep/golang-set"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -10,6 +12,7 @@ import (
 )
 
 func main() {
+	siteMapFile := "./siteMap.json"
 	domain := "https://github.com/"
 	maxUrlsToCrawl := 10
 
@@ -17,17 +20,27 @@ func main() {
 	host := link.Host
 	toCrawl := mapset.NewSet(link)
 	alreadyCrawled := mapset.NewSet()
+	siteMap := make(map[string][]string)
 	for i := 0; i < maxUrlsToCrawl; i++ {
 		linkToGet := toCrawl.Pop().(*url.URL)
 		links := GetExternalLinks(linkToGet)
 		alreadyCrawled.Add(*linkToGet)
 		sameDomainLinks := filterToSameDomain(host, links)
+
+		sameDomainLinksStr := make([]string, len(sameDomainLinks))
 		for _, link := range sameDomainLinks {
 			if !alreadyCrawled.Contains(*link) {
 				toCrawl.Add(link)
 			}
+			sameDomainLinksStr = append(sameDomainLinksStr, link.String())
 		}
+		siteMap[linkToGet.String()] = sameDomainLinksStr
 	}
+
+	jsonSiteMap, err := json.Marshal(siteMap)
+	check(err)
+	err = ioutil.WriteFile(siteMapFile, jsonSiteMap, 0644)
+	check(err)
 }
 
 func filterToSameDomain(host string, links []*url.URL) []*url.URL {
@@ -59,15 +72,11 @@ func GetExternalLinks(link *url.URL) []*url.URL {
 
 func GetUrls(parse *url.URL, body string) []*url.URL {
 	compile, err := regexp.Compile("href=\"[^\"]*\"")
-	if err != nil {
-		panic(err)
-	}
+	check(err)
 	links := make([]*url.URL, 0)
 	for _, str := range compile.FindAllString(body, -1) {
 		link, err := parse.Parse(str[6 : len(str)-1])
-		if err != nil {
-			panic(err)
-		}
+		check(err)
 		links = append(links, link)
 	}
 	return links
