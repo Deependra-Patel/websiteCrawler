@@ -13,28 +13,27 @@ import (
 
 func main() {
 	siteMapFile := "./siteMap.json"
-	domain := "https://github.com/"
+	startingUrl := "https://github.com/"
 	maxUrlsToCrawl := 10
 
-	link, _ := url.Parse(domain)
-	host := link.Host
-	toCrawl := mapset.NewSet(link)
+	startLink, err := url.Parse(startingUrl)
+	check(err)
+	toCrawl := mapset.NewSet(startLink)
 	alreadyCrawled := mapset.NewSet()
 	siteMap := make(map[string][]string)
 	for i := 0; i < maxUrlsToCrawl; i++ {
 		linkToGet := toCrawl.Pop().(*url.URL)
-		links := GetExternalLinks(linkToGet)
+		links := GetSameDomainLinks(linkToGet)
 		alreadyCrawled.Add(*linkToGet)
-		sameDomainLinks := filterToSameDomain(host, links)
 
-		sameDomainLinksStr := make([]string, len(sameDomainLinks))
-		for _, link := range sameDomainLinks {
+		linksStr := make([]string, len(links))
+		for _, link := range links {
 			if !alreadyCrawled.Contains(*link) {
 				toCrawl.Add(link)
 			}
-			sameDomainLinksStr = append(sameDomainLinksStr, link.String())
+			linksStr = append(linksStr, link.String())
 		}
-		siteMap[linkToGet.String()] = sameDomainLinksStr
+		siteMap[linkToGet.String()] = linksStr
 	}
 
 	jsonSiteMap, err := json.Marshal(siteMap)
@@ -43,17 +42,7 @@ func main() {
 	check(err)
 }
 
-func filterToSameDomain(host string, links []*url.URL) []*url.URL {
-	sameDomainLinks := make([]*url.URL, 0)
-	for _, link := range links {
-		if link.Host == host {
-			sameDomainLinks = append(sameDomainLinks, link)
-		}
-	}
-	return sameDomainLinks
-}
-
-func GetExternalLinks(link *url.URL) []*url.URL {
+func GetSameDomainLinks(link *url.URL) []*url.URL {
 	log.Print("Getting ", link)
 	resp, err := http.Get(link.String())
 	if err != nil {
@@ -66,7 +55,7 @@ func GetExternalLinks(link *url.URL) []*url.URL {
 			log.Panicf("Reading response body for link %s failed with %s", link, err)
 		}
 		log.Printf("Number of bytes read %d", count)
-		return GetUrls(link, string(buffer))
+		return FilterToSameDomain(link.Host, GetUrls(link, string(buffer)))
 	}
 }
 
@@ -80,4 +69,14 @@ func GetUrls(parse *url.URL, body string) []*url.URL {
 		links = append(links, link)
 	}
 	return links
+}
+
+func FilterToSameDomain(host string, links []*url.URL) []*url.URL {
+	sameDomainLinks := make([]*url.URL, 0)
+	for _, link := range links {
+		if link.Host == host {
+			sameDomainLinks = append(sameDomainLinks, link)
+		}
+	}
+	return sameDomainLinks
 }
