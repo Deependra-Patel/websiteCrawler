@@ -8,11 +8,24 @@ import (
 	"regexp"
 )
 
-func GetSameDomainLinks(link *url.URL, ch chan []*url.URL) {
+type Page struct {
+	link            *url.URL
+	sameDomainLinks []*url.URL
+}
+
+func New(link *url.URL, sameDomainLinks []*url.URL) *Page {
+	page := new(Page)
+	page.link = link
+	page.sameDomainLinks = sameDomainLinks
+	return page
+}
+
+func GetSameDomainLinks(link *url.URL) *Page {
 	log.Print("Getting ", link)
 	resp, err := http.Get(link.String())
 	if err != nil {
 		log.Panicf("Call failed for link: %s with error: %s", link, err)
+		return nil
 	} else {
 		buffer := make([]byte, 1024*1024)
 		count, err := resp.Body.Read(buffer)
@@ -20,7 +33,7 @@ func GetSameDomainLinks(link *url.URL, ch chan []*url.URL) {
 			log.Panicf("Reading response body for link %s failed with %s", link, err)
 		}
 		log.Printf("Number of bytes read %d", count)
-		ch <- FilterToSameDomain(link.Host, GetUrls(link, string(buffer)))
+		return New(link, FilterToSameDomain(link.Host, GetUrls(link, string(buffer))))
 	}
 }
 

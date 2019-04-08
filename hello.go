@@ -7,10 +7,23 @@ import (
 	"net/url"
 )
 
+func worker(links chan *url.URL, results chan *Page) {
+	for link := range links {
+		results <- GetSameDomainLinks(link)
+	}
+}
+
 func main() {
-	siteMapFile := "./siteMap.json"
-	startingUrl := "https://github.com/"
-	maxUrlsToCrawl := 10
+	const siteMapFile = "./siteMap.json"
+	const startingUrl = "https://github.com/"
+	const maxUrlsToCrawl = 100
+	const maxThreads = 20
+
+	jobs := make(chan *url.URL)
+	results := make(chan *Page)
+	for i := 0; i < maxThreads; i++ {
+		go worker(jobs, results)
+	}
 
 	startLink, err := url.Parse(startingUrl)
 	check(err)
@@ -18,21 +31,28 @@ func main() {
 	alreadyCrawled := mapset.NewSet()
 	siteMap := make(map[string][]string)
 
-	ch := make(chan []*url.URL)
-	for i := 0; i < maxUrlsToCrawl; i++ {
-		linkToGet := toCrawl.Pop().(*url.URL)
-		go GetSameDomainLinks(linkToGet, ch)
-		alreadyCrawled.Add(*linkToGet)
-		links := <-ch
-
-		linksStr := make([]string, len(links))
-		for _, link := range links {
-			if !alreadyCrawled.Contains(*link) {
-				toCrawl.Add(link)
+	pendingResults := 0
+	for alreadyCrawled.Cardinality() < maxUrlsToCrawl {
+		if toCrawl.Cardinality() > 0 && pendingResults < maxThreads {
+			linkToGet := toCrawl.Pop().(*url.URL)
+			jobs <- linkToGet
+			pendingResults++
+			alreadyCrawled.Add(*linkToGet)
+		} else if pendingResults == 0 {
+			break
+		} else {
+			page := <-results
+			pendingResults--
+			links := page.sameDomainLinks
+			linksStr := make([]string, len(links))
+			for _, link := range links {
+				if !alreadyCrawled.Contains(*link) {
+					toCrawl.Add(link)
+				}
+				linksStr = append(linksStr, link.String())
 			}
-			linksStr = append(linksStr, link.String())
+			siteMap[page.link.String()] = linksStr
 		}
-		siteMap[linkToGet.String()] = linksStr
 	}
 
 	jsonSiteMap, err := json.Marshal(siteMap)
