@@ -40,10 +40,10 @@ func GetSameDomainLinks(link string) *Page {
 	}
 }
 
-func GetUrls(parse *url.URL, body string) []*url.URL {
+func GetUrls(pageUrl *url.URL, body string) []*url.URL {
 	links := make([]*url.URL, 0)
 	for _, str := range hrefMatcher.FindAllString(body, -1) {
-		link, err := parse.Parse(str[6 : len(str)-1])
+		link, err := pageUrl.Parse(str[6 : len(str)-1])
 		check(err)
 		links = append(links, link)
 	}
