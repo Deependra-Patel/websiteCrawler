@@ -2,6 +2,7 @@ package main
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -29,11 +30,12 @@ func GetSameDomainLinks(link string) *Page {
 		log.Panicf("Call failed for link: %s with error: %s", link, err)
 		return nil
 	} else {
-		buffer := make([]byte, 1024*1024)
-		_, err := resp.Body.Read(buffer)
 		if err != nil && err != io.EOF {
 			log.Panicf("Reading response body for link %s failed with %s", link, err)
 		}
+		buffer, err := ioutil.ReadAll(resp.Body)
+		check(err)
+		check(resp.Body.Close())
 		parsedLink, err := url.Parse(link)
 		check(err)
 		return New(link, FilterToSameDomain(parsedLink.Host, GetUrls(parsedLink, string(buffer))))
