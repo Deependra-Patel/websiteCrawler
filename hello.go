@@ -5,6 +5,7 @@ import (
 	"github.com/deckarep/golang-set"
 	"io/ioutil"
 	"log"
+	"time"
 )
 
 func worker(links chan string, results chan *Page) {
@@ -15,10 +16,11 @@ func worker(links chan string, results chan *Page) {
 
 func main() {
 	const siteMapFile = "./siteMap.json"
-	const startingUrl = "http://github.com/"
-	const maxUrlsToCrawl = 5000
-	const maxThreads = 50
+	const startingUrl = "https://www.facebook.com/"
+	const maxUrlsToCrawl = 3000
+	const maxThreads = 100
 
+	startTime := time.Now().Unix()
 	jobs := make(chan string)
 	results := make(chan *Page)
 	for i := 0; i < maxThreads; i++ {
@@ -53,6 +55,8 @@ func main() {
 		}
 	}
 	log.Println("Number of pages crawled:", alreadyCrawled.Cardinality())
+	log.Println("Number of pages left in queue:", toCrawl.Cardinality())
+	log.Println("Time taken in seconds: ", time.Now().UTC().Unix()-startTime)
 
 	jsonSiteMap, err := json.Marshal(siteMap)
 	check(err)
