@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/deckarep/golang-set"
 	"io/ioutil"
+	"log"
 )
 
 func worker(links chan string, results chan *Page) {
@@ -29,13 +30,15 @@ func main() {
 	siteMap := make(map[string][]string)
 
 	pendingResults := 0
-	for alreadyCrawled.Cardinality() < maxUrlsToCrawl {
-		if toCrawl.Cardinality() > 0 && pendingResults < maxThreads {
+	for {
+		if alreadyCrawled.Cardinality() < maxUrlsToCrawl && toCrawl.Cardinality() > 0 && pendingResults < maxThreads {
 			linkToGet := toCrawl.Pop().(string)
 			jobs <- linkToGet
 			pendingResults++
 			alreadyCrawled.Add(linkToGet)
 		} else if pendingResults == 0 {
+			close(jobs)
+			close(results)
 			break
 		} else {
 			page := <-results
@@ -49,6 +52,7 @@ func main() {
 			siteMap[page.link] = links
 		}
 	}
+	log.Println("Number of pages crawled:", alreadyCrawled.Cardinality())
 
 	jsonSiteMap, err := json.Marshal(siteMap)
 	check(err)
