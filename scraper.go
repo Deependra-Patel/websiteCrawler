@@ -9,20 +9,20 @@ import (
 )
 
 type Page struct {
-	link            *url.URL
-	sameDomainLinks []*url.URL
+	link            string
+	sameDomainLinks []string
 }
 
-func New(link *url.URL, sameDomainLinks []*url.URL) *Page {
+func New(link string, sameDomainLinks []string) *Page {
 	page := new(Page)
 	page.link = link
 	page.sameDomainLinks = sameDomainLinks
 	return page
 }
 
-func GetSameDomainLinks(link *url.URL) *Page {
+func GetSameDomainLinks(link string) *Page {
 	log.Print("Getting ", link)
-	resp, err := http.Get(link.String())
+	resp, err := http.Get(link)
 	if err != nil {
 		log.Panicf("Call failed for link: %s with error: %s", link, err)
 		return nil
@@ -33,7 +33,9 @@ func GetSameDomainLinks(link *url.URL) *Page {
 			log.Panicf("Reading response body for link %s failed with %s", link, err)
 		}
 		log.Printf("Number of bytes read %d", count)
-		return New(link, FilterToSameDomain(link.Host, GetUrls(link, string(buffer))))
+		parsedLink, err := url.Parse(link)
+		check(err)
+		return New(link, FilterToSameDomain(parsedLink.Host, GetUrls(parsedLink, string(buffer))))
 	}
 }
 
@@ -49,11 +51,11 @@ func GetUrls(parse *url.URL, body string) []*url.URL {
 	return links
 }
 
-func FilterToSameDomain(host string, links []*url.URL) []*url.URL {
-	sameDomainLinks := make([]*url.URL, 0)
+func FilterToSameDomain(host string, links []*url.URL) []string {
+	sameDomainLinks := make([]string, 0)
 	for _, link := range links {
 		if link.Host == host {
-			sameDomainLinks = append(sameDomainLinks, link)
+			sameDomainLinks = append(sameDomainLinks, link.String())
 		}
 	}
 	return sameDomainLinks
