@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/golang/mock/gomock"
 	"net/url"
 	"testing"
 )
@@ -50,9 +49,6 @@ func TestFilterToSameDomain(t *testing.T) {
 }
 
 func TestScraper_GetSameDomainLinks(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
 	mockResponse := make(map[string]string, 0)
 	pageUrl := "https://www.github.com"
 	mockResponse[pageUrl] = "<a href=\"https://www.github.com/notification\"><a href=\"https://www.xyz.com\">"
