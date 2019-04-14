@@ -5,17 +5,18 @@ import (
 	"log"
 )
 
-func worker(links chan string, results chan *Page) {
+func worker(client HttpClient, links chan string, results chan *Page) {
+	scraper := Scraper{client}
 	for link := range links {
-		results <- GetSameDomainLinks(link)
+		results <- scraper.GetSameDomainLinks(link)
 	}
 }
 
-func getSiteMap(maxThreads int, startingUrl string, maxUrlsToCrawl int) map[string][]string {
+func getSiteMap(client HttpClient, maxThreads int, startingUrl string, maxUrlsToCrawl int) map[string][]string {
 	jobs := make(chan string)
 	results := make(chan *Page)
 	for i := 0; i < maxThreads; i++ {
-		go worker(jobs, results)
+		go worker(client, jobs, results)
 	}
 	toCrawl := mapset.NewSet(startingUrl)
 	alreadyCrawled := mapset.NewSet()

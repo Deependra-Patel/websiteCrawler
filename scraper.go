@@ -11,21 +11,22 @@ import (
 
 var hrefMatcher, _ = regexp.Compile("href=\"[^\"]*\"")
 
+type Scraper struct {
+	client HttpClient
+}
+
+type HttpClient interface {
+	Get(url string) (*http.Response, error)
+}
+
 type Page struct {
 	link            string
 	sameDomainLinks []string
 }
 
-func New(link string, sameDomainLinks []string) *Page {
-	page := new(Page)
-	page.link = link
-	page.sameDomainLinks = sameDomainLinks
-	return page
-}
-
-func GetSameDomainLinks(link string) *Page {
+func (s *Scraper) GetSameDomainLinks(link string) *Page {
 	log.Print("Getting ", link)
-	resp, err := http.Get(link)
+	resp, err := s.client.Get(link)
 	if err != nil {
 		log.Panicf("Call failed for link: %s with error: %s", link, err)
 		return nil
@@ -38,7 +39,7 @@ func GetSameDomainLinks(link string) *Page {
 		check(resp.Body.Close())
 		parsedLink, err := url.Parse(link)
 		check(err)
-		return New(link, FilterToSameDomain(parsedLink.Host, GetUrls(parsedLink, string(buffer))))
+		return &Page{link, FilterToSameDomain(parsedLink.Host, GetUrls(parsedLink, string(buffer)))}
 	}
 }
 

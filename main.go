@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"time"
 )
 
@@ -14,7 +15,7 @@ func main() {
 	const maxThreads = 100
 
 	startTime := time.Now().Unix()
-	siteMap := getSiteMap(maxThreads, startingUrl, maxUrlsToCrawl)
+	siteMap := getSiteMap(http.DefaultClient, maxThreads, startingUrl, maxUrlsToCrawl)
 	log.Println("Time taken in seconds: ", time.Now().UTC().Unix()-startTime)
 
 	jsonSiteMap, err := json.Marshal(siteMap)

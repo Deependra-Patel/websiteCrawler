@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/golang/mock/gomock"
 	"net/url"
 	"testing"
 )
@@ -45,5 +46,24 @@ func TestFilterToSameDomain(t *testing.T) {
 	expected := "https://www.github.com/Deependra-Patel"
 	if len(actual) != 1 || actual[0] != expected {
 		t.Error(actual, expected)
+	}
+}
+
+func TestScraper_GetSameDomainLinks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockResponse := make(map[string]string, 0)
+	pageUrl := "https://www.github.com"
+	mockResponse[pageUrl] = "<a href=\"https://www.github.com/notification\"><a href=\"https://www.xyz.com\">"
+	clientMock := ClientMock{mockResponse}
+
+	scraper := Scraper{&clientMock}
+	actual := scraper.GetSameDomainLinks(pageUrl)
+	if actual.link != pageUrl {
+		t.Error(actual, pageUrl)
+	}
+	if len(actual.sameDomainLinks) != 1 || actual.sameDomainLinks[0] != "https://www.github.com/notification" {
+		t.Error(actual, mockResponse)
 	}
 }
