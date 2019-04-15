@@ -10,8 +10,8 @@ import (
 
 func main() {
 	const siteMapFile = "./siteMap.json"
-	const startingUrl = "https://www.facebook.com/"
-	const maxUrlsToCrawl = 3000
+	const startingUrl = "https://www.github.com/"
+	const maxUrlsToCrawl = 1000
 	const maxThreads = 100
 
 	startTime := time.Now().Unix()
