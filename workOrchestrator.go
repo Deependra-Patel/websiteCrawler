@@ -18,8 +18,9 @@ func getSiteMap(client HttpClient, maxThreads int, startingUrl string, maxUrlsTo
 	for i := 0; i < maxThreads; i++ {
 		go worker(client, jobs, results)
 	}
-	toCrawl := mapset.NewSet(startingUrl)
-	alreadyCrawled := mapset.NewSet()
+	toCrawl := mapset.NewThreadUnsafeSet()
+	toCrawl.Add(startingUrl)
+	alreadyCrawled := mapset.NewThreadUnsafeSet()
 	siteMap := make(map[string][]string)
 	pendingResults := 0
 	for {
